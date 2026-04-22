@@ -44,8 +44,7 @@ This flow demonstrates the connection between the frontend, backend, and databas
 - **Database:** MongoDB
 
 ## Project Links
-- **GitHub Repository:** [INSERT LINK]
-- **Project Board / Jira:** [INSERT LINK]
+- **Project Board / Jira:** (https://lanaelm2503.atlassian.net/jira/software/projects/PROJ/boards/1)
 - **Frontend Deployment:** [INSERT LINK]
 - **Backend/API Deployment:** [INSERT LINK]
 
