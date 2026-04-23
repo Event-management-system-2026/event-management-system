@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function App() {
   const [events, setEvents] = useState([]);
@@ -12,8 +13,7 @@ function App() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/events")
+    axios.get(`${API_URL}/events`)
       .then((response) => {
         setEvents(response.data);
       })
@@ -29,7 +29,7 @@ function App() {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/register", {
+      const response = await axios.post(`${API_URL}/register`, {
         name: formData.name,
         email: formData.email,
         eventId: eventId,
