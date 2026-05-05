@@ -44,9 +44,9 @@ This flow demonstrates the connection between the frontend, backend, and databas
 - **Database:** MongoDB
 
 ## Project Links
-- **Project Board / Jira:** (https://lanaelm2503.atlassian.net/jira/software/projects/PROJ/boards/1)
-- **Frontend Deployment:** [INSERT LINK]
-- **Backend/API Deployment:** [INSERT LINK]
+- **Project Board / Jira:** (https://deemashaqir.atlassian.net/jira/software/projects/KAN/summary)
+- **Frontend Deployment:**  (https://event-management-system-kappa-ten.vercel.app/)
+- **Backend/API Deployment:** https://eventflow-backend-e07u.onrender.com
 
 ## Status
 The project is currently in the MVP development stage. The team has defined the main user stories, organized the project board, assigned story points, and is focusing on the core event creation and registration flow.
