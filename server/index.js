@@ -10,10 +10,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
+  host: "142.250.102.109",
   port: 587,
   secure: false,
-  family: 4,
+  requireTLS: true,
+  tls: {
+    servername: "smtp.gmail.com",
+  },
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
