@@ -5,7 +5,7 @@ import "./App.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function OrganizerDashboard({ currentUser }) {
-  const [organizerId, setOrganizerId] = useState(currentUser?.organizerId || "");
+  const [organizerId] = useState(currentUser?.organizerId || "");
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState({});
   const [message, setMessage] = useState("");
