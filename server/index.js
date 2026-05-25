@@ -151,21 +151,23 @@ app.post("/register", async (req, res) => {
     event.registeredCount += 1;
     await event.save();
 
-    await transporter.sendMail({
-  from: process.env.EMAIL_USER,
-  to: email,
-  subject: "EventFlow - Registration Successful",
-  text: `Hello ${name},
+    try {
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "EventFlow - Registration Successful",
+    text: `Hello ${name},
 
 You have successfully registered for the event: ${event.title}.
 
-Event Details:
-Date: ${event.date}
-Location: ${event.location}
-
 Thank you,
 EventFlow Team`,
-});
+  });
+
+  console.log("Email sent successfully");
+} catch (emailError) {
+  console.log("Email sending failed:", emailError.message);
+}
 
     res.status(201).json({
       message: "Registration successful",
