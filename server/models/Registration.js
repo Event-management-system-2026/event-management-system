@@ -10,7 +10,8 @@ const registrationSchema = new mongoose.Schema({
     required: true,
   },
   eventId: {
-    type: Number,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Event",
     required: true,
   },
   createdAt: {

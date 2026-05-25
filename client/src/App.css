@@ -54,7 +54,158 @@ h2 {
 }
 
 .message {
-  color: green;
   font-weight: bold;
-  margin-bottom: 15px;
+  margin-top: 10px;
+}
+
+.message.success {
+  color: green;
+}
+
+.message.error {
+  color: red;
+}
+
+.registrations-box {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.registration-item {
+  border-bottom: 1px solid #ccc;
+  padding: 8px 0;
+}
+
+.registration-item:last-child {
+  border-bottom: none;
+}
+
+.form-box button {
+  margin: 5px;
+  padding: 10px 15px;
+  border: none;
+  background-color: #222;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.form-box button:hover {
+  background-color: #444;
+}
+
+.edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-box input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.edit-box button {
+  padding: 10px;
+  border: none;
+  background-color: #222;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.edit-box button:hover {
+  background-color: #444;
+}
+
+.create-event-box {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px auto;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.create-event-box input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.create-event-box button {
+  padding: 10px;
+  border: none;
+  background-color: #222;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.create-event-box button:hover {
+  background-color: #444;
+}
+
+.event-card button {
+  margin: 5px;
+}
+
+.login-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 400px;
+  margin: 60px auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.login-box input {
+  display: block;
+  width: 90%;
+  margin: 10px auto;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.login-box button {
+  margin-top: 10px;
+  padding: 12px 20px;
+  border: none;
+  background-color: #222;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.login-box button:hover {
+  background-color: #444;
+}
+
+.demo-users {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #555;
+}
+
+.organizer-login-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 10px 15px;
+  border: none;
+  background-color: #222;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.organizer-login-btn:hover {
+  background-color: #444;
 }
