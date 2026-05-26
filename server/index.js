@@ -8,6 +8,8 @@ const Event = require("./models/Event");
 const nodemailer = require("nodemailer");
 const app = express();
 const PORT = process.env.PORT || 5000;
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const transporter = nodemailer.createTransport({
   host: "142.250.102.109",
@@ -158,21 +160,27 @@ app.post("/register", async (req, res) => {
     await event.save();
 
     try {
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: email,
+  const { data, error } = await resend.emails.send({
+    from: "EventFlow <onboarding@resend.dev>",
+    to: [email],
     subject: "EventFlow - Registration Successful",
-    text: `Hello ${name},
-
-You have successfully registered for the event: ${event.title}.
-
-Thank you,
-EventFlow Team`,
+    html: `
+      <h2>Hello ${name},</h2>
+      <p>You have successfully registered for the event:</p>
+      <h3>${event.title}</h3>
+      <p><strong>Date:</strong> ${event.date}</p>
+      <p><strong>Location:</strong> ${event.location}</p>
+      <p>Thank you,<br/>EventFlow Team</p>
+    `,
   });
 
-  console.log("Email sent successfully");
+  if (error) {
+    console.log("Resend email failed:", error);
+  } else {
+    console.log("Resend email sent:", data);
+  }
 } catch (emailError) {
-  console.log("Email sending failed:", emailError.message);
+  console.log("Resend email error:", emailError.message);
 }
 
     res.status(201).json({
