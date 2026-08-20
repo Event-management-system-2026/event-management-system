@@ -1,143 +1,171 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-function OrganizerDashboard({ currentUser }) {
+const EMPTY_FORM = { title: "", date: "", location: "", capacity: "" };
+
+function OrganizerDashboard({ currentUser, onLogout }) {
   const [organizerId] = useState(currentUser?.organizerId || "");
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState({});
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   const [editingEventId, setEditingEventId] = useState(null);
-  const [editForm, setEditForm] = useState({
-    title: "",
-    date: "",
-    location: "",
-    capacity: "",
-});
+  const [creating, setCreating] = useState(false);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [createForm, setCreateForm] = useState(EMPTY_FORM);
 
-const [createForm, setCreateForm] = useState({
-  title: "",
-  date: "",
-  location: "",
-  capacity: "",
-});
+  const [expandedId, setExpandedId] = useState(null);
+  // { kind: "event" | "registration", eventId, registrationId, label }
+  const [confirming, setConfirming] = useState(null);
 
-  const fetchOrganizerEvents = async () => {
+  const notify = (text, type = "success") => {
+    setMessage(text);
+    setMessageType(type);
+  };
+
+  const fetchOrganizerEvents = useCallback(async () => {
     if (!organizerId) {
-      setMessage("Please enter organizer ID");
+      setLoading(false);
       return;
     }
-
     try {
-      const response = await axios.get(
-        `${API_URL}/organizer/${organizerId}/events`
-      );
+      const response = await axios.get(`${API_URL}/organizer/${organizerId}/events`);
       setEvents(response.data);
-      setMessage("");
     } catch (error) {
-      setMessage("Failed to fetch organizer events");
+      notify("Couldn't load your events. Check the server connection.", "error");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [organizerId]);
+
+  // Load on arrival — making the organizer click "Load my events" to see
+  // an empty screen was the worst moment in the old flow.
+  useEffect(() => {
+    fetchOrganizerEvents();
+  }, [fetchOrganizerEvents]);
+
+  useEffect(() => {
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(""), 6000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   const fetchRegistrations = async (eventId) => {
     try {
       const response = await axios.get(
         `${API_URL}/organizer/${organizerId}/events/${eventId}/registrations`
       );
-
-      setRegistrations({
-        ...registrations,
-        [eventId]: response.data,
-      });
+      setRegistrations((prev) => ({ ...prev, [eventId]: response.data }));
     } catch (error) {
-      setMessage("Failed to fetch registrations");
+      notify("Couldn't load registrations for that event.", "error");
     }
   };
 
+  const toggleExpand = (eventId) => {
+    const next = expandedId === eventId ? null : eventId;
+    setExpandedId(next);
+    if (next && !registrations[next]) fetchRegistrations(next);
+  };
+
   const deleteRegistration = async (eventId, registrationId) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to remove this participant?"
-  );
+    if (busy) return;
+    setBusy(true);
+    try {
+      const response = await axios.delete(
+        `${API_URL}/organizer/${organizerId}/events/${eventId}/registrations/${registrationId}`
+      );
 
-  if (!confirmDelete) return;
+      setRegistrations((prev) => ({
+        ...prev,
+        [eventId]: prev[eventId].filter((reg) => reg._id !== registrationId),
+      }));
 
-  try {
-    const response = await axios.delete(
-      `${API_URL}/organizer/${organizerId}/events/${eventId}/registrations/${registrationId}`
-    );
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event._id === eventId
+            ? {
+                ...event,
+                registeredCount: response.data.registeredCount,
+                remainingSeats: response.data.remainingSeats,
+              }
+            : event
+        )
+      );
 
-    setRegistrations({
-      ...registrations,
-      [eventId]: registrations[eventId].filter(
-        (reg) => reg._id !== registrationId
-      ),
-    });
-
-    setEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event._id === eventId
-          ? {
-              ...event,
-              registeredCount: response.data.registeredCount,
-              remainingSeats: response.data.remainingSeats,
-            }
-          : event
-      )
-    );
-
-    setMessage("Participant removed successfully");
-  } catch (error) {
-    setMessage("Failed to remove participant");
-  }
-};
+      notify("Participant removed. Their seat is back in the pool.");
+    } catch (error) {
+      notify("Couldn't remove that participant.", "error");
+    } finally {
+      setBusy(false);
+      setConfirming(null);
+    }
+  };
 
   const startEditing = (event) => {
+    setCreating(false);
     setEditingEventId(event._id);
     setEditForm({
       title: event.title,
       date: event.date,
       location: event.location,
       capacity: event.capacity,
-  });
-};
+    });
+  };
 
-const saveEdit = async (eventId) => {
-  try {
-    const response = await axios.put(
-      `${API_URL}/organizer/${organizerId}/events/${eventId}`,
-      {
-        title: editForm.title,
-        date: editForm.date,
-        location: editForm.location,
-        capacity: Number(editForm.capacity),
-      }
-    );
-
-    setEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event._id === eventId
-          ? {
-              ...response.data.event,
-              remainingSeats:
-                response.data.event.capacity -
-                response.data.event.registeredCount,
-            }
-          : event
-      )
-    );
-
+  const startCreating = () => {
     setEditingEventId(null);
-    setMessage("Event updated successfully");
-  } catch (error) {
-    setMessage("Failed to update event");
-  }
-};
+    setCreateForm(EMPTY_FORM);
+    setCreating(true);
+  };
 
-const createEvent = async () => {
-  try {
+  const closeEditor = () => {
+    setEditingEventId(null);
+    setCreating(false);
+  };
+
+  const saveEdit = async (eventId) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const response = await axios.put(
+        `${API_URL}/organizer/${organizerId}/events/${eventId}`,
+        {
+          title: editForm.title,
+          date: editForm.date,
+          location: editForm.location,
+          capacity: Number(editForm.capacity),
+        }
+      );
+
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event._id === eventId
+            ? {
+                ...response.data.event,
+                remainingSeats:
+                  response.data.event.capacity - response.data.event.registeredCount,
+              }
+            : event
+        )
+      );
+
+      setEditingEventId(null);
+      notify("Event updated.");
+    } catch (error) {
+      notify("Couldn't save those changes.", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createEvent = async () => {
+    if (busy) return;
     if (
       !createForm.title ||
       !createForm.date ||
@@ -145,196 +173,362 @@ const createEvent = async () => {
       !createForm.capacity ||
       !organizerId
     ) {
-      setMessage("Please fill all fields");
+      notify("Fill in every field before saving.", "error");
       return;
     }
 
-    const response = await axios.post(`${API_URL}/events`, {
-      title: createForm.title,
-      date: createForm.date,
-      location: createForm.location,
-      capacity: Number(createForm.capacity),
-      organizerId,
-    });
+    setBusy(true);
+    try {
+      const response = await axios.post(`${API_URL}/events`, {
+        title: createForm.title,
+        date: createForm.date,
+        location: createForm.location,
+        capacity: Number(createForm.capacity),
+        organizerId,
+      });
 
-    const newEvent = {
-      ...response.data.event,
-      remainingSeats:
-        response.data.event.capacity -
-        response.data.event.registeredCount,
-    };
+      const newEvent = {
+        ...response.data.event,
+        remainingSeats:
+          response.data.event.capacity - response.data.event.registeredCount,
+      };
 
-    setEvents([...events, newEvent]);
+      setEvents((prev) => [...prev, newEvent]);
+      setCreateForm(EMPTY_FORM);
+      setCreating(false);
+      notify(`"${newEvent.title}" is live and open for registration.`);
+    } catch (error) {
+      notify("Couldn't create that event.", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
 
-    setCreateForm({
-      title: "",
-      date: "",
-      location: "",
-      capacity: "",
-    });
+  const deleteEvent = async (eventId) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await axios.delete(`${API_URL}/organizer/${organizerId}/events/${eventId}`);
+      setEvents((prev) => prev.filter((event) => event._id !== eventId));
+      notify("Event deleted.");
+    } catch (error) {
+      notify("Couldn't delete that event.", "error");
+    } finally {
+      setBusy(false);
+      setConfirming(null);
+    }
+  };
 
-    setMessage("Event created successfully");
-  } catch (error) {
-    setMessage("Failed to create event");
-  }
-};
+  // --- derived numbers for the stat strip ---
+  const totalCapacity = events.reduce((sum, e) => sum + (e.capacity || 0), 0);
+  const totalRegistered = events.reduce((sum, e) => sum + (e.registeredCount || 0), 0);
+  const fillRate = totalCapacity
+    ? Math.round((totalRegistered / totalCapacity) * 100)
+    : 0;
 
-const deleteEvent = async (eventId) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this event?"
-  );
+  const isEditing = editingEventId !== null;
+  const editorOpen = isEditing || creating;
+  const form = isEditing ? editForm : createForm;
+  const setForm = isEditing ? setEditForm : setCreateForm;
 
-  if (!confirmDelete) return;
-
-  try {
-    await axios.delete(
-      `${API_URL}/organizer/${organizerId}/events/${eventId}`
-    );
-
-    setEvents(events.filter((event) => event._id !== eventId));
-
-    setMessage("Event deleted successfully");
-  } catch (error) {
-    setMessage("Failed to delete event");
-  }
-};
+  const isConfirmingEvent = (id) =>
+    confirming?.kind === "event" && confirming.eventId === id;
+  const isConfirmingReg = (id) =>
+    confirming?.kind === "registration" && confirming.registrationId === id;
 
   return (
-    <div className="App">
-      <h1>Organizer Dashboard</h1>
+    <div className="page">
+      <header className="masthead">
+        <div className="brand">
+          <span className="brand-mark">EventFlow</span>
+          <span className="brand-sub">organizer</span>
+        </div>
+        <span className="whoami">
+          {currentUser?.username || organizerId || "Signed in"}
+        </span>
+        <button className="btn btn-line" onClick={onLogout}>
+          Sign out
+        </button>
+      </header>
 
-      <div className="form-box">
-        <input
-    type="text"
-    value={organizerId}
-    disabled
-    />
-        <button onClick={fetchOrganizerEvents}>Load My Events</button>
-      </div>
+      <main className="wrap">
+        <div className="section-head">
+          <span className="eyebrow">Dashboard</span>
+          <h1>Your events</h1>
+        </div>
 
-      {message && <p className="message">{message}</p>}
-
-      <div className="create-event-box">
-  <h2>Create New Event</h2>
-
-  <input
-    type="text"
-    placeholder="Title"
-    value={createForm.title}
-    onChange={(e) =>
-      setCreateForm({ ...createForm, title: e.target.value })
-    }
-  />
-
-  <input
-    type="text"
-    placeholder="Date"
-    value={createForm.date}
-    onChange={(e) =>
-      setCreateForm({ ...createForm, date: e.target.value })
-    }
-  />
-
-  <input
-    type="text"
-    placeholder="Location"
-    value={createForm.location}
-    onChange={(e) =>
-      setCreateForm({ ...createForm, location: e.target.value })
-    }
-  />
-
-  <input
-    type="number"
-    placeholder="Capacity"
-    value={createForm.capacity}
-    onChange={(e) =>
-      setCreateForm({ ...createForm, capacity: e.target.value })
-    }
-  />
-
-  <button onClick={createEvent}>Create Event</button>
-</div>
-
-      <div className="events-container">
-        {events.map((event) => (
-          <div key={event._id} className="event-card">
-            {editingEventId === event._id ? (
-  <div className="edit-box">
-    <input
-      type="text"
-      value={editForm.title}
-      onChange={(e) =>
-        setEditForm({ ...editForm, title: e.target.value })
-      }
-    />
-
-    <input
-      type="text"
-      value={editForm.date}
-      onChange={(e) =>
-        setEditForm({ ...editForm, date: e.target.value })
-      }
-    />
-
-    <input
-      type="text"
-      value={editForm.location}
-      onChange={(e) =>
-        setEditForm({ ...editForm, location: e.target.value })
-      }
-    />
-
-    <input
-      type="number"
-      value={editForm.capacity}
-      onChange={(e) =>
-        setEditForm({ ...editForm, capacity: e.target.value })
-      }
-    />
-
-    <button onClick={() => saveEdit(event._id)}>Save</button>
-    <button onClick={() => setEditingEventId(null)}>Cancel</button>
-  </div>
-) : (
-  <>
-    <h3>{event.title}</h3>
-    <p>Date: {event.date}</p>
-    <p>Location: {event.location}</p>
-    <p>Capacity: {event.capacity}</p>
-    <p>Registered: {event.registeredCount}</p>
-    <p>Remaining seats: {event.remainingSeats}</p>
-
-    <button onClick={() => startEditing(event)}>Edit Event</button>
-    <button onClick={() => deleteEvent(event._id)}>Delete Event</button>
-    <button onClick={() => fetchRegistrations(event._id)}>
-      View Registrations
-    </button>
-
-    {registrations[event._id] && (
-      <div className="registrations-box">
-        <h4>Registrations</h4>
-        {registrations[event._id].length === 0 ? (
-          <p>No registrations yet.</p>
-        ) : (
-          registrations[event._id].map((reg) => (
-  <div key={reg._id} className="registration-item">
-    <p>Name: {reg.name}</p>
-    <p>Email: {reg.email}</p>
-
-    <button onClick={() => deleteRegistration(event._id, reg._id)}>
-      Remove Participant
-    </button>
-  </div>
-))
-        )}
-      </div>
-    )}
-  </>
-)}
+        <div className="panel">
+          <div className="stats">
+            <div className="stat">
+              <span className="k">Events</span>
+              <span className="v">{events.length}</span>
+            </div>
+            <div className="stat">
+              <span className="k">Registered</span>
+              <span className="v">{totalRegistered}</span>
+            </div>
+            <div className="stat">
+              <span className="k">Capacity</span>
+              <span className="v">{totalCapacity}</span>
+            </div>
+            <div className="stat">
+              <span className="k">Fill rate</span>
+              <span className="v">{fillRate}%</span>
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-head">
+            <h2>{editorOpen ? (isEditing ? "Edit event" : "New event") : "All events"}</h2>
+            <button className="btn btn-ghost" onClick={fetchOrganizerEvents}>
+              Refresh
+            </button>
+            {!editorOpen && (
+              <button className="btn btn-quiet" onClick={startCreating}>
+                Add event
+              </button>
+            )}
+          </div>
+
+          {editorOpen && (
+            <>
+              <div className="form-grid">
+                <div className="full">
+                  <label htmlFor="f-title">Event name</label>
+                  <input
+                    id="f-title"
+                    type="text"
+                    placeholder="Harbour Night Market"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="f-location">Location</label>
+                  <input
+                    id="f-location"
+                    type="text"
+                    placeholder="Pier 3 Warehouse"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="f-date">Date</label>
+                  <input
+                    id="f-date"
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  />
+                  <p className="hint">Shown to attendees as day and month.</p>
+                </div>
+
+                <div>
+                  <label htmlFor="f-capacity">Capacity</label>
+                  <input
+                    id="f-capacity"
+                    type="number"
+                    min="1"
+                    placeholder="180"
+                    value={form.capacity}
+                    onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button className="btn btn-quiet" onClick={closeEditor}>
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-signal"
+                  disabled={busy}
+                  onClick={() => (isEditing ? saveEdit(editingEventId) : createEvent())}
+                >
+                  {busy ? "Saving…" : isEditing ? "Save changes" : "Create event"}
+                </button>
+              </div>
+            </>
+          )}
+
+          {loading && <div className="empty"><p>Loading your events…</p></div>}
+
+          {!loading && events.length === 0 && !editorOpen && (
+            <div className="empty">
+              <h3>No events yet</h3>
+              <p>Create your first event and it'll appear on the public board straight away.</p>
+              <button className="btn btn-signal" onClick={startCreating}>
+                Add your first event
+              </button>
+            </div>
+          )}
+
+          {!loading && events.length > 0 && (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Date</th>
+                  <th className="num">Registered</th>
+                  <th className="num">Seats left</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) => (
+                  <React.Fragment key={event._id}>
+                    <tr>
+                      <td>
+                        <strong>{event.title}</strong>
+                        <div className="sub">{event.location}</div>
+                      </td>
+                      <td className="sub">{event.date}</td>
+                      <td className="num">
+                        {event.registeredCount || 0} / {event.capacity}
+                      </td>
+                      <td className="num">{event.remainingSeats}</td>
+                      <td className="acts">
+                        {isConfirmingEvent(event._id) ? (
+                          <span className="confirm-inline">
+                            Delete "{event.title}" and all its registrations?
+                            <button
+                              className="btn btn-danger btn-sm"
+                              disabled={busy}
+                              onClick={() => deleteEvent(event._id)}
+                            >
+                              Delete
+                            </button>
+                            <button
+                              className="btn btn-quiet btn-sm"
+                              onClick={() => setConfirming(null)}
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="row-acts">
+                            <button
+                              className="btn btn-ghost"
+                              onClick={() => toggleExpand(event._id)}
+                              aria-expanded={expandedId === event._id}
+                            >
+                              {expandedId === event._id ? "Hide people" : "People"}
+                            </button>
+                            <button
+                              className="btn btn-ghost"
+                              onClick={() => startEditing(event)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-ghost-danger"
+                              onClick={() =>
+                                setConfirming({ kind: "event", eventId: event._id })
+                              }
+                            >
+                              Delete
+                            </button>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+
+                    {expandedId === event._id && (
+                      <tr className="subrow">
+                        <td colSpan={5}>
+                          <div className="subpanel">
+                            <h3>Registrations</h3>
+
+                            {!registrations[event._id] && (
+                              <p className="empty-sm">Loading…</p>
+                            )}
+
+                            {registrations[event._id] &&
+                              registrations[event._id].length === 0 && (
+                                <p className="empty-sm">
+                                  No one has registered yet. Share the event and the
+                                  first names will land here.
+                                </p>
+                              )}
+
+                            {registrations[event._id] &&
+                              registrations[event._id].length > 0 && (
+                                <table className="people">
+                                  <tbody>
+                                    {registrations[event._id].map((reg) => (
+                                      <tr key={reg._id}>
+                                        <td>{reg.name}</td>
+                                        <td className="sub">{reg.email}</td>
+                                        <td className="acts">
+                                          {isConfirmingReg(reg._id) ? (
+                                            <span className="confirm-inline">
+                                              Remove {reg.name}?
+                                              <button
+                                                className="btn btn-danger btn-sm"
+                                                disabled={busy}
+                                                onClick={() =>
+                                                  deleteRegistration(event._id, reg._id)
+                                                }
+                                              >
+                                                Remove
+                                              </button>
+                                              <button
+                                                className="btn btn-quiet btn-sm"
+                                                onClick={() => setConfirming(null)}
+                                              >
+                                                Cancel
+                                              </button>
+                                            </span>
+                                          ) : (
+                                            <span className="row-acts">
+                                              <button
+                                                className="btn btn-ghost-danger"
+                                                onClick={() =>
+                                                  setConfirming({
+                                                    kind: "registration",
+                                                    eventId: event._id,
+                                                    registrationId: reg._id,
+                                                  })
+                                                }
+                                              >
+                                                Remove
+                                              </button>
+                                            </span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </main>
+
+      {message && (
+        <div
+          className={`toast toast-up ${messageType === "error" ? "toast-error" : ""}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{message}</span>
+          <button onClick={() => setMessage("")} aria-label="Dismiss">
+            &times;
+          </button>
+        </div>
+      )}
     </div>
   );
 }

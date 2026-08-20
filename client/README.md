@@ -1,70 +1,145 @@
-# Getting Started with Create React App
+# EventFlow — Client
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React frontend for an event registration system. Attendees browse events and
+claim a seat; organizers sign in to manage their events and the people
+registered for them.
 
-## Available Scripts
+> **TODO:** add screenshots. Two are enough — the attendee board and the
+> organizer dashboard. Put them in `docs/` and link them here.
+>
+> ![Attendee board](docs/attendee.png)
+> ![Organizer dashboard](docs/organizer.png)
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Requirements
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Node.js 16 or newer
+- The EventFlow server running (see the server README)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Setup
 
-### `npm test`
+```bash
+npm install
+npm start
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The app runs at `http://localhost:3000` and expects the API at
+`http://localhost:5000` by default.
 
-### `npm run build`
+To point it somewhere else, create a `.env` file in the project root:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+REACT_APP_API_URL=http://localhost:5000
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+CRA only exposes variables prefixed with `REACT_APP_`, and the value is baked
+in at build time — changing it means restarting the dev server.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Scripts
 
-### `npm run eject`
+|     Command     | What it does |
+| ----------------| -------------|
+| `npm start`     | Development server with hot reload |
+| `npm test`      | Test suite in watch mode |
+| `npm run build` | Production bundle in `build/` |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Project structure
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+src/
+├── App.js                  Attendee board, filtering, registration, routing
+├── OrganizerDashboard.js   Event CRUD, registration management
+├── LoginPage.js            Organizer authentication
+├── App.css                 The entire design system
+└── index.css               Global reset only
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+There is no router. `App.js` decides what to render from two pieces of state:
+`currentUser` (an organizer is signed in) and `showOrganizerLogin` (the login
+screen was requested). Everything else is the public board.
 
-## Learn More
+All styling lives in `App.css`, driven by a token block at the top of the file
+— six colours, three typefaces, one spacing scale. Every downstream rule
+references those variables, so the whole app can be rethemed by editing about
+fifteen lines.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## How it works
 
-### Code Splitting
+**Registration.** Clicking Register on a row opens a drawer beneath it with
+name and email fields. On submit, the client POSTs to `/register` and updates
+that event's `remainingSeats` from the response, so the seat count is correct
+without refetching the list.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+**Organizer session.** After a successful login the user object is written to
+`sessionStorage`, so refreshing the page keeps the organizer signed in.
+Closing the tab signs them out. `sessionStorage` was chosen over
+`localStorage` deliberately: a session that outlives the browser tab is a poor
+default for anything behind a login, particularly on a shared machine.
 
-### Analyzing the Bundle Size
+**Filtering.** The filtered list is derived on every render rather than stored
+in state, so it can't drift out of sync with the source data when a seat count
+changes mid-session.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
+## Design decisions
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+The visual direction is a **departures board**. Events are inherently
+time-ordered and capacity-bound, which is exactly what a departures board
+encodes — so the monospaced figures, the status vocabulary, and the flip
+animation carry information rather than decorating it.
 
-### Advanced Configuration
+**One accent colour.** Amber appears only on live, actionable elements: the
+primary action, the open status, the date numeral. Full events drop to grey.
+An available event pulls the eye without any element having to shout.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+**Three typefaces with distinct jobs.** Barlow Condensed for headings, Public
+Sans for reading, IBM Plex Mono for anything numeric. The monospace isn't
+styling — it makes times and seat counts align vertically in columns, which is
+the actual reason real departure boards use it.
 
-### Deployment
+**Two audiences, two registers.** The attendee page is a browsing surface:
+dark, wide-spaced, one large gesture. The organizer dashboard is a working
+tool: white, dense, table-first, optimised for scanning numbers across rows.
+Same design tokens, opposite intent.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+**Destructive actions are staged.** Removing a participant hides its control
+until the row is hovered or focused, then asks for confirmation naming the
+person — "Remove Dana Levi?" rather than "this participant." Browser
+`window.confirm` dialogs were removed entirely; they can't be styled and can't
+name what they're about to destroy.
 
-### `npm run build` fails to minify
+**Motion is tied to state changes.** Four animations, each triggered by
+something happening: rows entering when the filter changes, the drawer
+opening, the seat counter flashing when it drops, and buttons responding to
+being pressed. Nothing animates ambiently.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Accessibility
+
+- Visible keyboard focus on every interactive element
+- All text meets WCAG AA contrast (4.5:1) — four colours were measured and
+  corrected during the redesign
+- Screen-reader labels on board cells that rely on visual column headers
+- Buttons labelled with their event, so a screen reader hears "Register for
+  Harbour Night Market" rather than six identical "Register" buttons
+- `prefers-reduced-motion` disables all animation
+- Layout responds down to 375px; board rows fold into cards below 800px
+
+---
+
+## Known limitations
+
+- **No real authentication.** The client stores the user object returned by
+  `/login`, but requests carry no token. See the server README.
+- **Free-text dates.** Older events may have dates typed as arbitrary strings.
+  `splitDate()` in `App.js` falls back to printing the raw value rather than
+  showing `NaN`.
+- **No duplicate-registration check** on the client; the same email can
+  register twice unless the server prevents it.
+
+> **TODO:** delete any of the above that you've since fixed.

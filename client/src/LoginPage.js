@@ -5,60 +5,90 @@ import "./App.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function LoginPage({ onLogin, onBack }) {
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
-
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const handleLogin = async () => {
+    if (!formData.username || !formData.password) {
+      setMessage("Enter both a username and a password.");
+      return;
+    }
+
+    setBusy(true);
     try {
-      if (!formData.username || !formData.password) {
-        setMessage("Please enter username and password");
-        return;
-      }
-
       const response = await axios.post(`${API_URL}/login`, formData);
-
       onLogin(response.data.user);
       setMessage("");
     } catch (error) {
-      setMessage("Invalid username or password");
+      setMessage("That username and password don't match an organizer account.");
+    } finally {
+      setBusy(false);
     }
   };
 
+  // Enter submits, which people expect from a login form.
+  const onKeyDown = (e) => {
+    if (e.key === "Enter") handleLogin();
+  };
+
   return (
-    <div className="App">
-      <div className="login-box">
-        <h1>Organizer Login</h1>
+    <div className="login-shell">
+      <div className="login-card">
+        <span className="eyebrow">EventFlow</span>
+        <h1>Organizer login</h1>
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={formData.username}
-          onChange={(e) =>
-            setFormData({ ...formData, username: e.target.value })
-          }
-        />
+        <div className="login-fields" onKeyDown={onKeyDown}>
+          <div className="field">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              autoComplete="username"
+              value={formData.username}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+            />
+          </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={(e) =>
-            setFormData({ ...formData, password: e.target.value })
-          }
-        />
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+            />
+          </div>
+        </div>
 
-        <button onClick={handleLogin}>Login</button>
-        <button onClick={onBack}>Back to Events</button>
-        {message && <p className="message">{message}</p>}
+        {message && (
+          <p className="inline-msg inline-msg-error" role="alert">
+            {message}
+          </p>
+        )}
+
+        <div className="login-actions">
+          <button className="btn btn-signal" onClick={handleLogin} disabled={busy}>
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+          <button className="btn btn-line" onClick={onBack}>
+            Back to events
+          </button>
+        </div>
 
         <div className="demo-users">
-          <h3>Demo Accounts</h3>
-          <p>Organizer 1: organizer1 / 1234</p>
-          <p>Organizer 2: organizer2 / 1234</p>
+          <strong>Demo accounts</strong>
+          <div>
+            organizer1 / <span>1234</span>
+          </div>
+          <div>
+            organizer2 / <span>1234</span>
+          </div>
         </div>
       </div>
     </div>

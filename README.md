@@ -1,11 +1,7 @@
 # EventFlow – Event Management System
 
-## Team Members
-- Lana Elmaraane
-- Baraa Shaqir
-- Deema Shaqir
+## Managing and Fullsatck:
 - Ameer Espanioly
-- Kamal Dallasheh
 
 ## Project Overview
 EventFlow is a web-based Event Management System designed to help organizers create, manage, and track events through one centralized platform.
@@ -27,8 +23,8 @@ Many event organizers still rely on spreadsheets, messaging apps, or manual proc
 - Manage participant lists
 - Track event information in one system
 
-## MVP Goal
-The MVP focuses on one complete working flow:
+## Project Goal
+The Project focuses on one complete working flow:
 
 1. An organizer creates a new event  
 2. The event appears in the system  
@@ -43,10 +39,8 @@ This flow demonstrates the connection between the frontend, backend, and databas
 - **Backend:** Node.js + Express
 - **Database:** MongoDB
 
-## Project Links
-- **Project Board / Jira:** (https://deemashaqir.atlassian.net/jira/software/projects/KAN/summary)
 - **Frontend Deployment:**  (https://event-management-system-kappa-ten.vercel.app/)
 - **Backend/API Deployment:** https://eventflow-backend-e07u.onrender.com
 
 ## Status
-The project is currently in the MVP development stage. The team has defined the main user stories, organized the project board, assigned story points, and is focusing on the core event creation and registration flow.
+The project is currently in the Full Ready to use stage.
