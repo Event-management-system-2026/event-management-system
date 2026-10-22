@@ -15,13 +15,9 @@ create and edit their own events, see who registered, and remove participants.
 Seat availability updates immediately as people register, and registrants
 receive a confirmation email.
 
-**Author:** Ameer
-**Course:** <!-- TODO: course name, semester, instructor -->
+**Author:** Ameer Espanioly
 
-<!-- TODO: add two screenshots — the public event board and the organizer
-     dashboard. Put them in docs/ and uncomment:
-![Event board](docs/attendee.png)
-![Organizer dashboard](docs/organizer.png)
+<!-- 
 -->
 
 ---
@@ -71,19 +67,33 @@ receive a confirmation email.
 
 ```
 event-management-system/
-├── client/          React frontend
+├── client/                          React frontend
+│   ├── public/
+│   │   └── index.html
 │   ├── src/
-│   │   ├── App.js                  Event board, search, registration
-│   │   ├── OrganizerDashboard.js   Event management, registrations
-│   │   ├── LoginPage.js            Organizer authentication
-│   │   └── App.css                 Design system
+│   │   ├── index.js                 Entry point
+│   │   ├── App.js                   Event board, search, registration
+│   │   ├── OrganizerDashboard.js    Event management, registrations
+│   │   ├── LoginPage.js             Organizer authentication
+│   │   ├── App.css                  Design system
+│   │   ├── index.css                Global reset
+│   │   └── App.test.js
+│   ├── package.json
 │   └── README.md
-└── server/          Express API
-    └── README.md
+├── server/                          Express API
+│   ├── models/
+│   │   ├── Event.js                 Event schema
+│   │   └── Registration.js          Registration schema
+│   ├── index.js                     Server, routes and email sending
+│   ├── package.json
+│   ├── .env                         Not committed
+│   └── README.md
+├── .gitignore
+└── README.md
 ```
 
-<!-- TODO: adjust if your server folder has a different name or sits at the
-     repository root. -->
+The server keeps all routes in a single `index.js`, with the Mongoose schemas
+separated into `models/`.
 
 ---
 

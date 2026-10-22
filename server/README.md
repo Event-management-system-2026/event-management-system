@@ -4,7 +4,7 @@ REST API for the Event Management System. Serves events, handles attendee
 registration with confirmation emails, and provides organizer-scoped
 management endpoints.
 
-Live API: <!-- TODO: your Render URL, e.g. https://eventflow-api.onrender.com -->
+Live API: <!-- e.g. https://eventflow-api.onrender.com -->
 
 > Hosted on Render's free tier, which sleeps after inactivity. The first
 > request after an idle period can take up to a minute.
